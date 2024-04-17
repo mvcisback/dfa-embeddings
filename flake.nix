@@ -1,0 +1,131 @@
+{
+  description = "An awesome machine-learning project";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+
+    utils.url = "github:numtide/flake-utils";
+
+    ml-pkgs.url = "github:nixvital/ml-pkgs";
+    ml-pkgs.inputs.nixpkgs.follows = "nixpkgs";
+    ml-pkgs.inputs.utils.follows = "utils";
+  };
+
+  outputs = { self, nixpkgs, ... }@inputs: {
+    overlays.dev = nixpkgs.lib.composeManyExtensions [
+      inputs.ml-pkgs.overlays.jax-family
+    ];
+  } // inputs.utils.lib.eachSystem [
+    "x86_64-linux"
+  ] (system:
+    let 
+       bitarray = pkgs.python310Packages.buildPythonPackage rec {
+           pname = "bitarray";
+           version = "2.9.2";
+           format = "setuptools";
+           src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "a8f286a51a32323715d77755ed959f94bef13972e9a2fe71b609e40e6d27957e";
+           };
+           nativeBuildInputs = [
+             pkgs.python3
+             pkgs.buildPackages.python310Packages.cffi  # Example dependency for CFFI-based extensions
+             pkgs.buildPackages.python310Packages.setuptools
+             pkgs.buildPackages.python310Packages.setuptools-scm
+             pkgs.buildPackages.python310Packages.wheel
+           ];
+           setupPyBuildFlags = [ "--inplace" ];
+        };
+
+        dfa = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "dfa";
+          version = "4.6.3";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "b4d511f73eb1588a391cc4a032362c836053963a17aa4bc58b40c59a39ea639a";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [
+            pkgs.python310Packages.attrs
+            pkgs.python310Packages.funcy
+            pkgs.python310Packages.pydot
+            pkgs.python310Packages.bidict
+            bitarray
+          ];
+        };
+
+
+        dfa-mutate = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "dfa_mutate";
+          version = "0.1.3";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "abe00e8afb4b7bf164806d3696caa1e511b2e869ac272f22b8e8afee4018d5ed";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [ dfa ];
+        };
+
+
+        dfa-identify = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "dfa_identify";
+          version = "3.13.0";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "4e701e25782d87ccf9c0d68f7d4bdac0f123d2bbed4c8dee1c0a2c706f5f6038";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [
+            dfa
+            pkgs.python310Packages.attrs
+            pkgs.python310Packages.bidict
+            pkgs.python310Packages.funcy
+            pkgs.python310Packages.more-itertools
+            pkgs.python310Packages.networkx
+            pkgs.python310Packages.python-sat
+          ];
+        };
+
+
+        pkgs = import nixpkgs {
+          inherit system;
+          config = {
+            allowUnfree = true;
+            cudaSupport = true;
+            cudaCapabilities = [ "7.5" "8.6" ];
+            cudaForwardCompat = false;
+          };
+          overlays = [ self.overlays.dev ];
+        };
+    in {
+      devShells.default = let
+        python-env = pkgs.python310.withPackages (pyPkgs: with pyPkgs; [
+          numpy
+          pandas
+          dfa
+          dfa-identify
+          dfa-mutate
+          torch
+        ]);
+
+        name = "jax-equinox-basics";
+      in pkgs.mkShell {
+        inherit name;
+
+        packages = [
+          python-env
+          pkgs.python310Packages.flit
+          pkgs.python310Packages.ptpython
+          pkgs.python310Packages.jupyterlab
+          pkgs.python310Packages.jupytext
+          pkgs.graphviz
+        ];
+      };
+    });
+}
