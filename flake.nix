@@ -70,7 +70,6 @@
           propagatedBuildInputs = [ dfa ];
         };
 
-
         dfa-identify = pkgs.python310Packages.buildPythonPackage rec {
           pname = "dfa_identify";
           version = "3.13.0";
@@ -92,6 +91,24 @@
           ];
         };
 
+        jraph = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "jraph";
+          version = "0.0.6.dev0";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "350fe37bf717f934f1f84fd3370a480b3178bfcb61dfa217c738971308c57625";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [
+            pkgs.python310Packages.jax
+            pkgs.python310Packages.jaxlib-bin
+            pkgs.python310Packages.numpy
+          ];
+        };
+
+
 
         pkgs = import nixpkgs {
           inherit system;
@@ -107,11 +124,15 @@
       devShells.default = let
         python-env = pkgs.python310.withPackages (pyPkgs: with pyPkgs; [
           numpy
+          scipy
           pandas
           dfa
           dfa-identify
           dfa-mutate
-          torch
+          jax
+          jaxlib-bin
+          jraph
+          tqdm
         ]);
 
         name = "jax-equinox-basics";
