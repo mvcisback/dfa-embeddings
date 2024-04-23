@@ -108,7 +108,53 @@
           ];
         };
 
+        rotary-embedding-torch = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "rotary_embedding_torch";
+          version = "0.5.3";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "7c0297a21301fbd0d20cfdcba33be5d1ad0a46e33454168af08413dbf3e07457";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [
+            pkgs.python310Packages.einops
+            pkgs.python310Packages.torch
+            pkgs.python310Packages.beartype
+          ];
+        };
 
+
+        graph-transformer-pytorch = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "graph_transformer_pytorch";
+          version = "0.1.1";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "e1dd4761c9f944362a9db52454512614b93b47182e57b888761cffee17973eb6";
+            dist = python;
+            python = "py3";
+          };
+          propagatedBuildInputs = [
+            pkgs.python310Packages.torch
+            pkgs.python310Packages.einops
+            rotary-embedding-torch
+          ];
+        };
+
+        # Maybe a typo in the graphtranformers library
+        einsum = pkgs.python310Packages.buildPythonPackage rec {
+          pname = "einsum";
+          version = "0.3.0";
+          format = "wheel";
+          src = pkgs.python310Packages.fetchPypi rec {
+            inherit pname version format;
+            sha256 = "6d2b1f7932879d630969bfb599e09f8448dcbc38a2be6cee192b8a1ae02c52dc";
+            dist = python;
+            python = "py3";
+          };
+        };
 
         pkgs = import nixpkgs {
           inherit system;
@@ -129,10 +175,13 @@
           dfa
           dfa-identify
           dfa-mutate
-          jax
-          jaxlib-bin
-          jraph
+          #jax
+          #jaxlib-bin
+          #jraph
+          torch
+          graph-transformer-pytorch
           tqdm
+          # pytorch-lightning
         ]);
 
         name = "jax-equinox-basics";
