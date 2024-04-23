@@ -86,8 +86,8 @@ device = (
 
 
 
-def train(n_iters=100):
-    dfa_encoder = DFAEncoder(n_tokens=4,
+def train(n_iters=10_000, n_tokens=12):
+    dfa_encoder = DFAEncoder(n_tokens=n_tokens,
                              output_dim=8,
                              hidden_dim=16,
                              depth=6,
@@ -100,10 +100,9 @@ def train(n_iters=100):
     # TODO: clean up data loader API.
     # TODO: make dataloader deterministic via seed.
     def my_dfa_sampler(rng=None):
-        yield from sample_dfas(n_tokens=12)
+        yield from sample_dfas(n_tokens=n_tokens)
 
     dataloader = gen_problems(my_dfa_sampler)
-    loss_fn = torch.nn.MSELoss()
 
     running_loss = 0
     for iter, (problem, answer) in zip(range(n_iters), dataloader):
@@ -112,69 +111,23 @@ def train(n_iters=100):
         graph1, graph2 = map(dfa2graph, problem)
         # TODO: Handle conjunctive distribution using seperate head.
         distinguish_distr, _ = answer
+        distinguish_distr = torch.from_numpy(distinguish_distr)
 
         # TODO: model should directly take in dfa!
         prediction = model(graph1.node_features, graph1.adj_matrix,
                            graph2.node_features, graph2.adj_matrix)
 
-        loss = loss_fn(prediction, distinguish_distr)
+        loss = ((distinguish_distr - prediction)**2).mean()
         loss.backward()
 
         optimizer.step()
 
         running_loss += loss.item()
-        if i % 1000 == 999:
+        if iter % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
-            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            print('  batch {} loss: {}'.format(iter + 1, last_loss))
             running_loss = 0 
 
 
 if __name__ == "__main__":
-    # TODO: convert to unit tests.
-    def transition(state, token):
-        match (state, token):
-            case (_, "lava"):  return "dead"
-            case ("dry", "y"): return "done"
-            case ("dry", "b"): return "wet"
-            case ("wet", "y"): return "dead"
-            case ("wet", "g"): return "dry"
-            case (s, _):       return s
-
-    d1 = DFA(start="dry",
-             inputs={"r", "g", "b", "y"},
-             label=lambda s: s == "done",
-             transition=transition)
-
-    graph1 = dfa2graph(d1)
-    graph2 = dfa2graph(~d1)
-
-    dfa_encoder = DFAEncoder(n_tokens=4,
-                             output_dim=8,
-                             hidden_dim=16,
-                             depth=6,
-                             n_heads=2)
-    predictor = ActionPredictor(dfa_encoder)
-    prediction = predictor(graph1.node_features, graph1.adj_matrix,
-                           graph2.node_features, graph2.adj_matrix)
-    target = torch.Tensor(target_dist(d1, ~d1, True))
-    loss = torch.nn.MSELoss()
-    print(loss(prediction, target))
-
     train()
-    """
-    N = len(d.states())
-    predict = np.ones(1 + N) / N
-    for state in d.states():
-        print(state)
-        d2 = evolve(d, start=state)
-        print(target)
-        print(loss(target, predict))
-
-    def my_dfa_sampler(rng=None):
-        if rng is None: rng = random.Random(100)
-        while True:
-            gen_dfas = dfa_mutate.generate_mutations(d)
-            dfas = fn.take(10, fn.distinct(gen_dfas))
-            rng.shuffle(dfas)
-            yield from dfas
-    """
