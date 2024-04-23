@@ -63,8 +63,8 @@ def dfa2graph(d: DFA):
             idx12 = node2idx[s1, s2]
 
             # Connect s1 to s2.
-            adj[idx1, idx12] = 1
-            adj[idx12, idx2] = 1
+            adj[idx2, idx12] = 1
+            adj[idx12, idx1] = 1
 
             # Note token leading to s2.
             node_features[idx12, 2 + token2idx[token]] = 1
