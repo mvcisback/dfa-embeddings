@@ -103,7 +103,7 @@ class DFAEncoder(nn.Module):
     def forward(self, h: torch.Tensor, adj_mat: torch.Tensor):
         h = self.pre(h)
         for layer in self.graph_layers:
-            h += layer(h, adj_mat) 
+            h = h + layer(h, adj_mat) 
             h = self.layer_norm(h)
         return self.post(h[0])  # index 0 is assumed to be the start.
 
