@@ -83,6 +83,51 @@ device = (
 )
 
 
+
+
+def train(n_iters=100):
+    dfa_encoder = DFAEncoder(n_tokens=4,
+                             output_dim=8,
+                             hidden_dim=16,
+                             depth=6,
+                             n_heads=2)
+    model = ActionPredictor(dfa_encoder)
+
+    # TODO: Switch to adam.
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+    # TODO: clean up data loader API.
+    # TODO: make dataloader deterministic via seed.
+    def my_dfa_sampler(rng=None):
+        yield from sample_dfas(n_tokens=12)
+
+    dataloader = gen_problems(my_dfa_sampler)
+    loss_fn = torch.nn.MSELoss()
+
+    running_loss = 0
+    for iter, (problem, answer) in zip(range(n_iters), dataloader):
+        optimizer.zero_grad()
+
+        graph1, graph2 = map(dfa2graph, problem)
+        # TODO: Handle conjunctive distribution using seperate head.
+        distinguish_distr, _ = answer
+
+        # TODO: model should directly take in dfa!
+        prediction = model(graph1.node_features, graph1.adj_matrix,
+                           graph2.node_features, graph2.adj_matrix)
+
+        loss = loss_fn(prediction, distinguish_distr)
+        loss.backward()
+
+        optimizer.step()
+
+        running_loss += loss.item()
+        if i % 1000 == 999:
+            last_loss = running_loss / 1000 # loss per batch
+            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            running_loss = 0 
+
+
 if __name__ == "__main__":
     # TODO: convert to unit tests.
     def transition(state, token):
@@ -114,6 +159,7 @@ if __name__ == "__main__":
     loss = torch.nn.MSELoss()
     print(loss(prediction, target))
 
+    train()
     """
     N = len(d.states())
     predict = np.ones(1 + N) / N
