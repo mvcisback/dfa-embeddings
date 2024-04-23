@@ -46,7 +46,8 @@ def dfa2graph(d: DFA):
     for state, (_, transitions) in dfa_dict.items():
         for token, state2 in transitions.items():
             if state2 == state: continue
-            node2idx[state, state2] = idx
+            if (state, state2) in node2idx: continue
+            node2idx[(state, state2)] = idx
             idx += 1
 
     # Fill in adj matrix and node features
