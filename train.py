@@ -99,7 +99,7 @@ def train(n_iters=1_000_000, n_tokens=12):
     model = ActionPredictor(dfa_encoder)
 
     # TODO: Switch to adam.
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     # TODO: clean up data loader API.
     # TODO: make dataloader deterministic via seed.
