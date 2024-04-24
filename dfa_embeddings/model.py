@@ -108,6 +108,34 @@ class DFAEncoder(nn.Module):
         return self.post(h[0])  # index 0 is assumed to be the start.
 
 
+class DFATranformerEncoder(nn.Module):
+    def __init__(self,
+                 n_tokens: int,
+                 output_dim: int,
+                 hidden_dim: int,
+                 depth: int,
+                 n_heads: int = 1):
+        super().__init__()
+        self.n_tokens = n_tokens
+        self.output_dim = output_dim
+        self.pre = nn.Linear(2 + self.n_tokens, hidden_dim)
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer=nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=n_heads),
+            num_layers=depth,
+        )
+        self.post = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, h: torch.Tensor, adj_mat: torch.Tensor):
+        h = self.pre(h)
+        # TODO: Apply adj_matrix or reachable matrix as mask.
+        adj_mat = ~adj_mat.bool().squeeze()
+        mask = torch.zeros_like(adj_mat)
+        mask[adj_mat] = -float('inf')
+        h = self.transformer(h, mask)
+        return self.post(h[0])  # index 0 is assumed to be the start.
+
+
+
 class ActionPredictor(nn.Module):
     def __init__(self, dfa_encoder: DFAEncoder):
         super().__init__()

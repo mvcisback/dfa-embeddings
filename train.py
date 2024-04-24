@@ -11,6 +11,8 @@ from tqdm import tqdm
 from dfa_embeddings.dfa_sampler import sample_dfas
 from dfa_embeddings.dataloader import gen_problems, target_dist
 from dfa_embeddings.model import DFAEncoder, ActionPredictor
+from dfa_embeddings.model import DFATranformerEncoder
+
 
 
 @dataclass
@@ -89,11 +91,11 @@ torch.set_default_device(device)
 
 
 def train(n_iters=1_000_000, n_tokens=12):
-    dfa_encoder = DFAEncoder(n_tokens=n_tokens,
-                             output_dim=8,
-                             hidden_dim=16,
-                             depth=6,
-                             n_heads=2)
+    dfa_encoder = DFATranformerEncoder(n_tokens=n_tokens,
+                                       output_dim=8,
+                                       hidden_dim=16,
+                                       depth=6,
+                                       n_heads=2)
     model = ActionPredictor(dfa_encoder)
 
     # TODO: Switch to adam.
