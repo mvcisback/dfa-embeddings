@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from bidict import bidict
 from dfa import DFA, dfa2dict
+from tqdm import tqdm
 
 from dfa_embeddings.dfa_sampler import sample_dfas
 from dfa_embeddings.dataloader import gen_problems, target_dist
@@ -71,8 +72,8 @@ def dfa2graph(d: DFA):
             node_features[idx12, 2 + token2idx[token]] = 1
 
     adj = adj.reshape(n_nodes, n_nodes, 1)
-    return Graph(adj_matrix=torch.Tensor(adj),
-                 node_features=torch.Tensor(node_features))
+    return Graph(adj_matrix=torch.Tensor(adj).to(device),
+                 node_features=torch.Tensor(node_features).to(device))
 
 
 device = (
@@ -84,9 +85,10 @@ device = (
 )
 
 
+torch.set_default_device(device)
 
 
-def train(n_iters=10_000, n_tokens=12):
+def train(n_iters=1_000_000, n_tokens=12):
     dfa_encoder = DFAEncoder(n_tokens=n_tokens,
                              output_dim=8,
                              hidden_dim=16,
@@ -105,13 +107,14 @@ def train(n_iters=10_000, n_tokens=12):
     dataloader = gen_problems(my_dfa_sampler)
 
     running_loss = 0
-    for iter, (problem, answer) in zip(range(n_iters), dataloader):
+    for iter in tqdm(range(n_iters)):
+        problem, answer = next(dataloader)
         optimizer.zero_grad()
 
         graph1, graph2 = map(dfa2graph, problem)
         # TODO: Handle conjunctive distribution using seperate head.
         distinguish_distr, _ = answer
-        distinguish_distr = torch.from_numpy(distinguish_distr)
+        distinguish_distr = torch.from_numpy(distinguish_distr).to(device)
 
         # TODO: model should directly take in dfa!
         prediction = model(graph1.node_features, graph1.adj_matrix,
@@ -127,6 +130,8 @@ def train(n_iters=10_000, n_tokens=12):
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(iter + 1, last_loss))
             running_loss = 0 
+
+    torch.save(model.state_dict(), "pytorch_model")
 
 
 if __name__ == "__main__":
