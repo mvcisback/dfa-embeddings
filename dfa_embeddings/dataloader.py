@@ -55,8 +55,4 @@ def loss(predicted, target):
 
 
 def gen_problems(dfa_sampler, rng=None):
-    for d1, d2 in fn.pairwise(dfa_sampler(rng)):
-        for distinguish in (True,):
-            problem = (d1, d1)
-            answer = (target_dist(d1, d2, True), target_dist(d1, d2, False))
-            yield (problem, answer)
+    yield from fn.pairwise(dfa_sampler(rng))

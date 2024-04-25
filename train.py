@@ -1,4 +1,5 @@
-from typing import Any
+import random
+from typing import Any, Optional
 from dataclasses import dataclass
 
 import funcy as fn
@@ -20,14 +21,32 @@ class Graph:
     # N = Number of states + Non-Stuttering Transitions.
     # M = Number of tokens.
     # M + 3 node types: accepting/rejecting/token
-    # [ is_accepting, is_rejecting, token_1, ... ]
-    node_features: Any  # 1 x N x (M + w).
+    # [ psat, is_accepting, is_rejecting, token_1, ... ]
+    node_features: Any  # 1 x N x (M + 3).
     adj_matrix: Any     # N x N.
+
+
+def rand_sat(d: DFA, start: Optional[int]=None,
+             n_samples=100, eoe_prob: float =1/32):
+    if start is None: start = d.start
+    tokens = list(d.inputs)
+    count = 0.0
+    for _ in range(n_samples):
+        word = []
+        while random.random() < eoe_prob:
+            word.append(random.choice(tokens))
+            count += int(d.label(word, start=start))
+    return count / n_samples
+
+
+def rand_sat_per_state(d: DFA, **kwargs):
+    # Randomly sample words and 
+    return {s: rand_sat(d, start=s, **kwargs) for s in d.states()}
 
 
 def dfa2graph(d: DFA):
     dfa_dict, start = dfa2dict(d)
-
+    state2psat = rand_sat_per_state(d)
     # Create indexing for tokens.
     inputs = sorted(d.inputs)  # Force unique edge features w. canonical order.
     n_tokens = len(d.inputs)
@@ -56,11 +75,12 @@ def dfa2graph(d: DFA):
     # Fill in adj matrix and node features
     n_nodes = len(node2idx)
     adj = np.zeros((n_nodes, n_nodes))
-    node_features = np.zeros((n_nodes, 2 + n_tokens))
+    node_features = np.zeros((n_nodes, 3 + n_tokens))
     for s1, (label, transitions) in dfa_dict.items():
         idx1 = node2idx[s1]
         adj[idx1, idx1] = 1  # Represents stutter.
         node_features[idx1, int(label)] = 1
+        node_features[idx1, 2] = state2psat[s1]
         for token, s2 in transitions.items():
             if s1 == s2: continue
             idx2 = node2idx[s2]
@@ -71,7 +91,7 @@ def dfa2graph(d: DFA):
             adj[idx12, idx1] = 1
 
             # Note token leading to s2.
-            node_features[idx12, 2 + token2idx[token]] = 1
+            node_features[idx12, 3 + token2idx[token]] = 1
 
     adj = adj.reshape(n_nodes, n_nodes, 1)
     return Graph(adj_matrix=torch.Tensor(adj).to(device),
@@ -97,6 +117,7 @@ def train(n_iters=1_000_000, n_tokens=12):
                                        depth=6,
                                        n_heads=2)
     model = ActionPredictor(dfa_encoder)
+    model.train(True)
 
     # TODO: Switch to adam.
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
