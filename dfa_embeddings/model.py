@@ -150,4 +150,4 @@ class ActionPredictor(nn.Module):
                       h2: torch.Tensor, adj_mat2: torch.Tensor):
         h1 = self.dfa_encoder(h1, adj_mat1)
         h2 = self.dfa_encoder(h2, adj_mat2)
-        return self.decoder(torch.cat([h1, h2])) ** 2
+        return self.decoder(torch.cat([h1, h2]))
