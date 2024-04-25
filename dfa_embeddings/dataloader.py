@@ -1,7 +1,7 @@
 import random
 from attr import evolve
 from collections import deque, defaultdict
-from itertools import chain
+from itertools import chain, product
 
 import dfa
 import dfa_mutate
@@ -55,4 +55,8 @@ def loss(predicted, target):
 
 
 def gen_problems(dfa_sampler, rng=None):
-    yield from fn.pairwise(dfa_sampler(rng))
+    for d1, d2 in fn.pairwise(dfa_sampler(rng)):
+        for start1, start2 in product(d1.states(), d2.states()):
+            _d1 = evolve(d1, start=start1)
+            _d2 = evolve(d2, start=start2)
+            yield (_d1, _d2)
