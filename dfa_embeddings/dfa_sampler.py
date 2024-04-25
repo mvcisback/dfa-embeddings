@@ -136,7 +136,7 @@ def sample_dfas(n_tokens, *,
             weights.extend([len(bin(x)) - 2 for x in xs])
     weights = softmax(-np.array(weights) / tempature)
 
-    reach_avoids = reach_avoid_sampler(n_tokens)
+    reach_avoids = reach_avoid_sampler(n_tokens, avg_size=5)
 
     alphabet = list(range(n_tokens))
     while True:
