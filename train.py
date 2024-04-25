@@ -164,7 +164,7 @@ def train(n_iters=1_000_000, n_tokens=12):
         return ((target - prediction)**2).mean()
 
     running_loss = 0
-    replay_buffer = deque(maxlen=500)
+    replay_buffer = deque(maxlen=1_000)
     for iter in tqdm(range(n_iters)):
         optimizer.zero_grad()
 
@@ -172,7 +172,7 @@ def train(n_iters=1_000_000, n_tokens=12):
             problem = next(dataloader)
             replay_buffer.append((problem, problem2target(problem)))
 
-        problem, target = replay_buffer[-1]
+        problem, target = random.choice(replay_buffer)
         loss = eval_problem(model, problem, target)
         loss.backward()
 
