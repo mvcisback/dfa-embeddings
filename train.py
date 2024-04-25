@@ -1,4 +1,6 @@
 import random
+from collections import deque
+from functools import lru_cache
 from typing import Any, Optional
 from dataclasses import dataclass
 
@@ -27,7 +29,7 @@ class Graph:
 
 
 def rand_sat(d: DFA, start: Optional[int]=None,
-             n_samples=100, eoe_prob: float =1/32):
+             n_samples=10_000, eoe_prob: float =1/32):
     if start is None: start = d.start
     tokens = list(d.inputs)
     count = 0.0
@@ -44,6 +46,7 @@ def rand_sat_per_state(d: DFA, **kwargs):
     return {s: rand_sat(d, start=s, **kwargs) for s in d.states()}
 
 
+@lru_cache
 def dfa2graph(d: DFA):
     dfa_dict, start = dfa2dict(d)
     state2psat = rand_sat_per_state(d)
@@ -111,16 +114,16 @@ torch.set_default_device(device)
 
 
 def train(n_iters=1_000_000, n_tokens=12):
-    dfa_encoder = DFATranformerEncoder(n_tokens=n_tokens,
-                                       output_dim=256,
-                                       hidden_dim=256,
-                                       depth=6,
-                                       n_heads=2)
-    #dfa_encoder = DFAEncoder(n_tokens=n_tokens,
-    #                         output_dim=256,
-    #                         hidden_dim=256,
-    #                         depth=6,
-    #                         n_heads=2)
+    #dfa_encoder = DFATranformerEncoder(n_tokens=n_tokens,
+    #                                   output_dim=256,
+    #                                   hidden_dim=256,
+    #                                   depth=6,
+    #                                   n_heads=2)
+    dfa_encoder = DFAEncoder(n_tokens=n_tokens,
+                             output_dim=128,
+                             hidden_dim=128,
+                             depth=6,
+                             n_heads=4)
 
     model = ActionPredictor(dfa_encoder)
     model.train(True)
@@ -135,40 +138,55 @@ def train(n_iters=1_000_000, n_tokens=12):
 
     dataloader = gen_problems(my_dfa_sampler)
 
+    def problem2target(problem):
+        distiguishing_dfa = problem[0] ^ problem[1]
+        graph1, graph2 = map(dfa2graph, problem)
+
+        tokens = range(n_tokens)
+        target = torch.zeros(len(tokens) + 1) 
+        
+        target[-1] = rand_sat(distiguishing_dfa)
+        for idx, token in enumerate(tokens):
+            start = distiguishing_dfa.transition((token,))
+            target[idx] = rand_sat(distiguishing_dfa, start=start)
+        return -torch.log(target + 0.0000001)
+
+    test_set = fn.take(200, dataloader)
+    test_set = [(p, problem2target(p)) for p in test_set]
+
+    def eval_problem(model, problem, target):
+        graph1, graph2 = map(dfa2graph, problem)
+
+        # TODO: model should directly take in dfa!
+        prediction = model(graph1.node_features, graph1.adj_matrix,
+                           graph2.node_features, graph2.adj_matrix)
+
+        return ((target - prediction)**2).mean()
+
     running_loss = 0
+    replay_buffer = deque(maxlen=500)
     for iter in tqdm(range(n_iters)):
         optimizer.zero_grad()
-        targets = []
-        loss = 0.0
-        for _ in range(100):
+
+        if (replay_buffer.maxlen > len(replay_buffer)) or (iter % 100 == 0):
             problem = next(dataloader)
-            distiguishing_dfa = problem[0] ^ problem[1]
-            graph1, graph2 = map(dfa2graph, problem)
+            replay_buffer.append((problem, problem2target(problem)))
 
-            tokens = range(n_tokens)
-            target = torch.zeros(len(tokens) + 1) 
-        
-            target[-1] = rand_sat(distiguishing_dfa)
-            for idx, token in enumerate(tokens):
-                start = distiguishing_dfa.transition((token,))
-                target[idx] = rand_sat(distiguishing_dfa, start=start)
-            target = -torch.log(target + 0.0000001)
-
-            # TODO: model should directly take in dfa!
-            prediction = model(graph1.node_features, graph1.adj_matrix,
-                               graph2.node_features, graph2.adj_matrix)
-
-
-            loss += ((target - prediction)**2).mean()
+        problem, target = replay_buffer[-1]
+        loss = eval_problem(model, problem, target)
         loss.backward()
 
         optimizer.step()
 
         running_loss += loss.item()
-        if iter % 10 == 0:
-            last_loss = running_loss / 1000 # loss per batch
+        if iter % 500 == 499:
+            last_loss = running_loss / 500 # loss per batch
             print('  batch {} loss: {}'.format(iter + 1, last_loss))
             running_loss = 0 
+        if iter % 1000 == 999:
+            with torch.no_grad():
+                test_loss = sum(eval_problem(model, *x) for x in test_set) / len(test_set)
+                print('  test loss: {}'.format(test_loss))
 
     torch.save(model.state_dict(), "pytorch_model")
 
