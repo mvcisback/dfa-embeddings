@@ -136,11 +136,11 @@ def sample_dfas(n_tokens, *,
             weights.extend([len(bin(x)) - 2 for x in xs])
     weights = softmax(-np.array(weights) / tempature)
 
-    reach_avoids = reach_avoid_sampler(n_tokens, avg_size=5)
+    reach_avoids = reach_avoid_sampler(n_tokens, avg_size=3)
 
     alphabet = list(range(n_tokens))
     while True:
-        if random.random() <= 1/2:
+        if random.random() <= 1/100:
             candidate = next(reach_avoids)
         else:
             encoding = random.choices(encodings, weights=weights)[0]
