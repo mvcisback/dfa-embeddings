@@ -112,10 +112,16 @@ torch.set_default_device(device)
 
 def train(n_iters=1_000_000, n_tokens=12):
     dfa_encoder = DFATranformerEncoder(n_tokens=n_tokens,
-                                       output_dim=8,
-                                       hidden_dim=16,
+                                       output_dim=256,
+                                       hidden_dim=256,
                                        depth=6,
                                        n_heads=2)
+    #dfa_encoder = DFAEncoder(n_tokens=n_tokens,
+    #                         output_dim=256,
+    #                         hidden_dim=256,
+    #                         depth=6,
+    #                         n_heads=2)
+
     model = ActionPredictor(dfa_encoder)
     model.train(True)
 
@@ -131,25 +137,35 @@ def train(n_iters=1_000_000, n_tokens=12):
 
     running_loss = 0
     for iter in tqdm(range(n_iters)):
-        problem, answer = next(dataloader)
         optimizer.zero_grad()
+        targets = []
+        loss = 0.0
+        for _ in range(100):
+            problem = next(dataloader)
+            distiguishing_dfa = problem[0] ^ problem[1]
+            graph1, graph2 = map(dfa2graph, problem)
 
-        graph1, graph2 = map(dfa2graph, problem)
-        # TODO: Handle conjunctive distribution using seperate head.
-        distinguish_distr, _ = answer
-        distinguish_distr = torch.from_numpy(distinguish_distr).to(device)
+            tokens = range(n_tokens)
+            target = torch.zeros(len(tokens) + 1) 
+        
+            target[-1] = rand_sat(distiguishing_dfa)
+            for idx, token in enumerate(tokens):
+                start = distiguishing_dfa.transition((token,))
+                target[idx] = rand_sat(distiguishing_dfa, start=start)
+            target = -torch.log(target + 0.0000001)
 
-        # TODO: model should directly take in dfa!
-        prediction = model(graph1.node_features, graph1.adj_matrix,
-                           graph2.node_features, graph2.adj_matrix)
+            # TODO: model should directly take in dfa!
+            prediction = model(graph1.node_features, graph1.adj_matrix,
+                               graph2.node_features, graph2.adj_matrix)
 
-        loss = ((distinguish_distr - prediction)**2).mean()
+
+            loss += ((target - prediction)**2).mean()
         loss.backward()
 
         optimizer.step()
 
         running_loss += loss.item()
-        if iter % 1000 == 999:
+        if iter % 10 == 0:
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(iter + 1, last_loss))
             running_loss = 0 

@@ -95,7 +95,7 @@ class DFAEncoder(nn.Module):
         graph_layer = lambda: GraphAttentionV2Layer(in_features=hidden_dim,
                                                     out_features=hidden_dim,
                                                     n_heads=n_heads)
-        self.pre = nn.Linear(2 + self.n_tokens, hidden_dim)
+        self.pre = nn.Linear(3 + self.n_tokens, hidden_dim)
         self.graph_layers = [graph_layer() for _ in range(depth)]
         self.layer_norm =  nn.LayerNorm(hidden_dim)
         self.post = nn.Linear(hidden_dim, output_dim)
@@ -118,7 +118,7 @@ class DFATranformerEncoder(nn.Module):
         super().__init__()
         self.n_tokens = n_tokens
         self.output_dim = output_dim
-        self.pre = nn.Linear(2 + self.n_tokens, hidden_dim)
+        self.pre = nn.Linear(3 + self.n_tokens, hidden_dim)
         self.transformer = nn.TransformerEncoder(
             encoder_layer=nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=n_heads),
             num_layers=depth,
@@ -128,9 +128,11 @@ class DFATranformerEncoder(nn.Module):
     def forward(self, h: torch.Tensor, adj_mat: torch.Tensor):
         h = self.pre(h)
         # TODO: Apply adj_matrix or reachable matrix as mask.
-        adj_mat = ~adj_mat.bool().squeeze()
-        mask = torch.zeros_like(adj_mat)
-        mask[adj_mat] = -float('inf')
+        mask = None
+        if adj_mat.shape[0] > 1:
+            adj_mat = ~adj_mat.bool().squeeze()
+            mask = torch.zeros_like(adj_mat)
+            mask[adj_mat] = -float('inf')
         h = self.transformer(h, mask)
         return self.post(h[0])  # index 0 is assumed to be the start.
 
@@ -143,11 +145,9 @@ class ActionPredictor(nn.Module):
         n_tokens = self.dfa_encoder.n_tokens
         # Last token represents EOS.
         self.decoder = nn.Linear(2 * dfa_encoder.output_dim, n_tokens + 1)
-        self.softmax = nn.Softmax()
 
     def forward(self, h1: torch.Tensor, adj_mat1: torch.Tensor,
                       h2: torch.Tensor, adj_mat2: torch.Tensor):
         h1 = self.dfa_encoder(h1, adj_mat1)
         h2 = self.dfa_encoder(h2, adj_mat2)
-        h = self.decoder(torch.cat([h1, h2]))
-        return self.softmax(h)
+        return self.decoder(torch.cat([h1, h2])) ** 2
