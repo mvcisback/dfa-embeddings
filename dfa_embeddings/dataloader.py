@@ -9,7 +9,6 @@ import funcy as fn
 import numpy as np
 import scipy as sp
 from dfa import DFA
-from dfa_embeddings.dfa_sampler import sample_dfas
 
 
 def target_dist(d1: DFA, d2: DFA, distinguish: bool):
