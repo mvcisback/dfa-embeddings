@@ -2,6 +2,7 @@ import torch
 import random
 import numpy as np
 from bidict import bidict
+import collections
 
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -101,3 +102,53 @@ def dfa2graph(d: DFA):
     adj = adj.reshape(n_nodes, n_nodes, 1)
     return Graph(adj_matrix=torch.Tensor(adj).to(device),
                  node_features=torch.Tensor(node_features).to(device))
+
+
+def gen_geometric(p=0.5):
+    while True:
+        yield np.random.geometric(p=p)
+
+
+def cDFA_sampler(dfa_sampler, and_gen=gen_geometric(p=0.5), or_gen=gen_geometric(p=1.0)):
+    while True:
+        yield tuple(tuple(next(dfa_sampler) for _ in range(next(or_gen))) for _ in range(next(and_gen)))
+
+
+def seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def synthesize(array):
+    d = collections.OrderedDict()
+    d["mean"] = np.mean(array)
+    d["std"] = np.std(array)
+    d["min"] = np.amin(array)
+    d["max"] = np.amax(array)
+    return d
+
+
+def average_reward_per_step(returns, num_frames):
+    avgs = []
+    assert(len(returns) == len(num_frames))
+
+    for i in range(len(returns)):
+        avgs.append(returns[i] / num_frames[i])
+
+    return np.mean(avgs)
+
+
+def average_discounted_return(returns, num_frames, disc, include_error=False):
+    discounted_returns = []
+    assert(len(returns) == len(num_frames))
+
+    for i in range(len(returns)):
+        discounted_returns.append(returns[i] * (disc ** (num_frames[i]-1)))
+
+    if include_error:
+        return np.mean(discounted_returns), np.std(discounted_returns)
+    else:
+        return np.mean(discounted_returns)
