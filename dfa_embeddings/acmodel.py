@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical, Normal
-import dfa_embeddings.torch_ac
+import torch_ac
 
 from gymnasium.spaces import Box, Discrete
 
@@ -36,7 +36,7 @@ def init_params(m):
             m.bias.data.fill_(0)
 
 
-class ACModel(nn.Module, dfa_embeddings.torch_ac.ACModel):
+class ACModel(nn.Module, torch_ac.ACModel):
     def __init__(self, input_dim, output_dim, freeze):
         super().__init__()
 

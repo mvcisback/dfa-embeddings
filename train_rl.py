@@ -22,7 +22,7 @@ from dfa_embeddings.models.GATv2Conv import GATv2ConvEncoder
 
 from dfa_embeddings.acmodel import ACModel
 
-import dfa_embeddings.torch_ac
+import torch_ac
 
 
 device = utils.device
@@ -101,11 +101,11 @@ if __name__ == "__main__":
     print(acmodel)
 
     if args.algo == "a2c":
-        algo = dfa_embeddings.torch_ac.A2CAlgo(envs, acmodel, device, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+        algo = torch_ac.A2CAlgo(envs, acmodel, device, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
                             args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                             args.optim_alpha, args.optim_eps, preprocessor)
     elif args.algo == "ppo":
-        algo = dfa_embeddings.torch_ac.PPOAlgo(envs, acmodel, device, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+        algo = torch_ac.PPOAlgo(envs, acmodel, device, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
                                 args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                                 args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocessor)
 

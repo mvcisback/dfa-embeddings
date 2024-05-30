@@ -6,7 +6,7 @@ import dgl
 import torch
 import networkx as nx
 from copy import deepcopy
-from dfa import DFA
+from dfa import DFA, dict2dfa
 
 # feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "AND": -6, "OR": -7, "distance_normalized": -8}
 # feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "AND": -6, "distance_normalized": -7}
@@ -47,7 +47,8 @@ class DFABuilder(object):
         rename_goal = []
         nxg_init_nodes = []
         for i, dfa_clause in enumerate(dfa_goal):
-            for _, dfa in enumerate(dfa_clause):
+            for _, dfa_dict in enumerate(dfa_clause):
+                dfa = dict2dfa(*dfa_dict)
                 nxg, init_node = self.dfa_to_formatted_nxg(dfa)
                 nxg_goal.append(nxg)
                 rename_goal.append(str(i) + "_")

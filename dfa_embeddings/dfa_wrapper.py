@@ -2,6 +2,7 @@ import numpy as np
 import gymnasium as gym
 from functools import reduce
 import operator as OP
+from dfa import dfa2dict
 
 class DFAEnv(gym.Wrapper):
     def __init__(self, env, sampler):
@@ -12,7 +13,7 @@ class DFAEnv(gym.Wrapper):
     def reset(self, seed=None):
         self.env.reset()
         self.dfa_goal = next(self.sampler)
-        return self.dfa_goal
+        return self._to_dict(self.dfa_goal), None
 
     def step(self, action):
         env_done = self.env.step(action)
@@ -32,7 +33,7 @@ class DFAEnv(gym.Wrapper):
         reward  = dfa_reward
         done    = env_done or dfa_done
 
-        return self.dfa_goal, reward, done, {}
+        return self._to_dict(self.dfa_goal), reward, done, False, None
 
     def get_dfa_reward(self, old_dfa_goal, dfa_goal):
         if old_dfa_goal != dfa_goal:
@@ -48,4 +49,7 @@ class DFAEnv(gym.Wrapper):
 
     def _advance(self, dfa_goal, truth_assignment):
         return tuple(tuple(dfa.advance(truth_assignment).minimize() for dfa in dfa_clause) for dfa_clause in dfa_goal)
+
+    def _to_dict(self, dfa_goal):
+        return tuple(tuple(dfa2dict(dfa) for dfa in dfa_clause) for dfa_clause in dfa_goal)
 
