@@ -18,8 +18,6 @@ from dfa_embeddings.dfa_builder import DFABuilder
 from dfa_embeddings.dfa_wrapper import DFAEnv
 from dfa_embeddings.envs.dummy import DummyEnv
 
-from dfa_embeddings.models.GATv2Conv import GATv2ConvEncoder
-
 from dfa_embeddings.acmodel import ACModel
 
 import torch_ac

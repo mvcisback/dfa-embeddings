@@ -1,4 +1,4 @@
-# import ring
+import ring
 import random
 import numpy as np
 
@@ -26,30 +26,23 @@ class DFABuilder(object):
         self.feature_size = n_tokens + len(feature_inds)
 
     # To make the caching work.
-    # def __ring_key__(self):
-    #     return "DFABuilder"
+    def __ring_key__(self):
+        return "DFABuilder"
 
-    def __call__(self, dfa_goal, device=None, library="dgl"):
-        # print(dfa_goal)
-        # input(0)
-        # dfa_goal = dfa_goal[0]["dfa"]
-        # if isinstance(dfa_goal, list):
-        #     # return [self._to_graph(i, library) for i in dfa_goal]
-        #     return list(map(lambda i: self._to_graph(i, library), dfa_goal))
-        return self._to_graph(dfa_goal, library)
+    def __call__(self, dfa_goal, device=None):
+        return self._to_graph(dfa_goal)
 
-    def _to_graph(self, dfa_goal, library="dgl"):
-        return self._to_graph_one_layer(dfa_goal, library)
+    def _to_graph(self, dfa_goal):
+        return self._to_graph_one_layer(dfa_goal)
 
-    # @ring.lru(maxsize=400000)
-    def _to_graph_one_layer(self, dfa_goal, library="dgl"):
+    @ring.lru(maxsize=400000)
+    def _to_graph_one_layer(self, dfa_goal):
         nxg_goal = []
         rename_goal = []
         nxg_init_nodes = []
         for i, dfa_clause in enumerate(dfa_goal):
             for _, dfa_dict in enumerate(dfa_clause):
-                dfa = dict2dfa(*dfa_dict)
-                nxg, init_node = self.dfa_to_formatted_nxg(dfa)
+                nxg, init_node = self.dfa_dict_to_nxg(*dfa_dict)
                 nxg_goal.append(nxg)
                 rename_goal.append(str(i) + "_")
                 nxg_init_nodes.append(str(i) + "_" + init_node)
@@ -73,13 +66,10 @@ class DFABuilder(object):
 
         nxg = composed_nxg_goal
 
-        # draw(nxg)
-        # input()
-
         return self._get_dgl_graph(nxg)
 
     # @ring.lru(maxsize=400000)
-    def _to_graph_two_layers(self, dfa_goal, library="dgl"):
+    def _to_graph_two_layers(self, dfa_goal):
         nxg_goal = []
         nxg_goal_or_nodes = []
         rename_goal = []
@@ -87,8 +77,8 @@ class DFABuilder(object):
             nxg_clause = []
             nxg_init_nodes = []
             rename_clause = []
-            for j, dfa in enumerate(dfa_clause):
-                nxg, init_node = self.dfa_to_formatted_nxg(dfa)
+            for j, dfa_dict in enumerate(dfa_clause):
+                nxg, init_node = self.dfa_dict_to_nxg(*dfa_dict)
                 nxg_clause.append(nxg)
                 rename_clause.append(str(j) + "_")
                 nxg_init_nodes.append(str(j) + "_" + init_node)
@@ -157,43 +147,27 @@ class DFABuilder(object):
             return depths[state]/100.0
         return 1.0
 
-    def _unroll_dfa_loops(self, d, k=2):
-        def transition(s, c):
-            s, counts = s
-            counts = dict(counts)
-            visit_count = counts.get(s, 0)
-            if visit_count >= k:
-                return (s, tuple(counts.items()))
-            counts[s] = 1 + visit_count
-            return (d._transition(s, c), tuple(counts.items()))
-        return DFA(
-                start=(d.start, ()),
-                label=lambda s: d._label(s[0]),
-                transition=transition,
-                inputs=d.inputs
-            )
-
-    # @ring.lru(maxsize=600000)
-    def dfa_to_formatted_nxg(self, dfa):
+    @ring.lru(maxsize=600000)
+    def dfa_dict_to_nxg(self, dfa_dict, init_state):
 
         nxg = nx.DiGraph()
         new_node_name_counter = 0
         new_node_name_base_str = "temp_"
 
-        for s in dfa.states():
+        for s in dfa_dict.keys():
             start = str(s)
             nxg.add_node(start)
             nxg.nodes[start]["feat"] = np.array([[0.0] * self.feature_size])
             nxg.nodes[start]["feat"][0][feature_inds["normal"]] = 1.0
             # Assumption: We never do more than chain length 7-8 so deviding by 100 is safe.
             # nxg.nodes[start]["feat"][0][feature_inds["distance_normalized"]] = self.min_distance_to_accept_by_state_normalized(dfa, s)
-            if dfa._label(s): # is accepting?
+            is_accepting, transitions = dfa_dict[s]
+            if is_accepting: # is accepting?
                 nxg.nodes[start]["feat"][0][feature_inds["accepting"]] = 1.0
-            elif sum(s != dfa._transition(s, a) for a in dfa.inputs) == 0: # is rejecting?
+            elif sum(s != e for e in transitions.values()) == 0: # is rejecting?
                 nxg.nodes[start]["feat"][0][feature_inds["rejecting"]] = 1.0
             embeddings = {}
-            for a in dfa.inputs:
-                e = dfa._transition(s, a)
+            for a, e in transitions.items():
                 if s == e:
                     continue # We define self loops later when composing graphs
                 end = str(e)
@@ -208,7 +182,7 @@ class DFABuilder(object):
                 nxg.add_edge(end, new_node_name, type=edge_types["normal-to-temp"])
                 nxg.add_edge(new_node_name, start, type=edge_types["temp-to-normal"])
 
-        init_node = str(dfa.start)
+        init_node = str(init_state)
         nxg.nodes[init_node]["feat"][0][feature_inds["init"]] = 1.0
 
         return nxg, init_node
