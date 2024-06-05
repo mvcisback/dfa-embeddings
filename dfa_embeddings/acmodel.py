@@ -19,6 +19,7 @@ from gymnasium.spaces import Box, Discrete
 
 from dfa_embeddings.gnns.graphs.GCN import *
 from dfa_embeddings.gnns.graphs.GATv2Conv import GATv2ConvEncoder
+from dfa_embeddings.gnns.graphs.Transformer import TranformerEncoder
 
 from dfa_embeddings.policy_network import PolicyNetwork
 
@@ -37,7 +38,7 @@ def init_params(m):
 
 
 class ACModel(nn.Module, torch_ac.ACModel):
-    def __init__(self, input_dim, output_dim, freeze):
+    def __init__(self, input_dim, output_dim, gnn_type, freeze):
         super().__init__()
 
 
@@ -49,7 +50,12 @@ class ACModel(nn.Module, torch_ac.ACModel):
 
         hidden_dim = 32
         self.text_embedding_size = 32
-        self.gnn = GATv2ConvEncoder(input_dim, self.text_embedding_size).to(self.device)
+        if gnn_type == "GATv2Conv":
+            self.gnn = GATv2ConvEncoder(input_dim, self.text_embedding_size).to(self.device)
+        elif gnn_type == "Tranformer":
+            self.gnn = TranformerEncoder(input_dim, self.text_embedding_size).to(self.device)
+        else:
+            raise NotImplementedError
         print("GNN Number of parameters:", sum(p.numel() for p in self.gnn.parameters() if p.requires_grad))
 
        # Resize image embedding

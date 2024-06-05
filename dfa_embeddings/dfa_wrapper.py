@@ -5,9 +5,10 @@ import operator as OP
 from dfa import dfa2dict
 
 class DFAEnv(gym.Wrapper):
-    def __init__(self, env, sampler):
+    def __init__(self, env, sampler, compositional=False):
         super().__init__(env)
         self.env = env
+        self.compositional = compositional
         self.sampler = sampler
 
     def reset(self, seed=None):
@@ -37,7 +38,10 @@ class DFAEnv(gym.Wrapper):
 
     def get_dfa_reward(self, old_dfa_goal, dfa_goal):
         if old_dfa_goal != dfa_goal:
-            mono_dfa = self._to_monolithic_dfa(dfa_goal)
+            if self.compositional:
+                mono_dfa = self._to_monolithic_dfa(dfa_goal)
+            else:
+                mono_dfa = dfa_goal
             if mono_dfa._label(mono_dfa.start):
                 return 1.0, True
             if mono_dfa.find_word() is None:
@@ -48,8 +52,12 @@ class DFAEnv(gym.Wrapper):
         return reduce(OP.and_, map(lambda dfa_clause: reduce(OP.or_, dfa_clause), dfa_goal))
 
     def _advance(self, dfa_goal, truth_assignment):
-        return tuple(tuple(dfa.advance(truth_assignment).minimize() for dfa in dfa_clause) for dfa_clause in dfa_goal)
+        if self.compositional:
+            return tuple(tuple(dfa.advance(truth_assignment).minimize() for dfa in dfa_clause) for dfa_clause in dfa_goal)
+        return dfa_goal.advance(truth_assignment).minimize()
 
     def _to_dict(self, dfa_goal):
-        return tuple(tuple(dfa2dict(dfa) for dfa in dfa_clause) for dfa_clause in dfa_goal)
+        if self.compositional:
+            return tuple(tuple(dfa2dict(dfa) for dfa in dfa_clause) for dfa_clause in dfa_goal)
+        return dfa2dict(dfa_goal)
 

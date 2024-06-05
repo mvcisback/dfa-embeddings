@@ -26,7 +26,11 @@ class GATv2ConvEncoder(GNN):
         g = dgl.batch(g)
         h_0 = self.linear_in(g.ndata["feat"].float().squeeze(dim=1))
         h = h_0
-        for i in range(self.num_layers):
+        # for i in range(self.num_layers):
+        depths = g.ndata["depth"]
+        n = int(max(filter(lambda x: x < float("inf"), depths)))
+        # n = g.number_of_nodes()
+        for _ in range(n):
             h = self.conv(g, torch.cat([h, h_0], dim=1)).sum(dim=1)
         g.ndata['h'] = h
         g.ndata["is_root"] = g.ndata["is_root"].float()
