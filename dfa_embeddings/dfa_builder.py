@@ -11,8 +11,8 @@ from dfa.utils import min_distance_to_accept_by_state
 
 # feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "AND": -6, "OR": -7, "distance_normalized": -8}
 # feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "AND": -6, "distance_normalized": -7}
-feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "AND": -6}
-edge_types = {k:v for (v, k) in enumerate(["self", "normal-to-temp", "temp-to-normal", "AND"])}
+feature_inds = {"rejecting": -1, "accepting": -2, "temp": -3, "normal": -4, "init": -5, "ROOT": -6}
+edge_types = {k:v for (v, k) in enumerate(["self", "normal-to-temp", "temp-to-normal", "ROOT"])}
 # edge_types = {k:v for (v, k) in enumerate(["self", "normal-to-temp", "temp-to-normal", "AND", "OR"])}
 
 """
@@ -42,6 +42,19 @@ class DFABuilder(object):
     @ring.lru(maxsize=400000)
     def _to_graph_dfa(self, dfa_dict):
         nxg, init_node = self.dfa_dict_to_nxg(*dfa_dict)
+
+        # root_node = "ROOT"
+        # nxg.add_node(root_node, feat=np.array([[0.0] * self.feature_size]))
+
+        # nx.set_node_attributes(nxg, np.array([0.0]), "is_root")
+
+        # nxg.nodes[root_node]["is_root"] = np.array([1.0])
+        # nxg.nodes[root_node]["feat"][0][feature_inds["ROOT"]] = 1.0
+        # nxg.nodes[root_node]["depth"] = 0
+
+        # for node in nxg.nodes:
+        #     if node != root_node and nxg.nodes[node]["feat"][0][feature_inds["temp"]] == 0:
+        #         nxg.add_edge(node, root_node, type=edge_types["ROOT"])
 
         nx.set_node_attributes(nxg, np.array([0.0]), "is_root")
         nxg.nodes[init_node]["is_root"] = np.array([1.0])

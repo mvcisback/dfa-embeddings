@@ -47,18 +47,27 @@ def get_model_state(model_dir):
     return get_status(model_dir)["model_state"]
 
 
-def get_txt_logger(model_dir):
+def get_txt_logger(model_dir, enable_stdout=True):
     path = os.path.join(model_dir, "log.txt")
     utils.create_folders_if_necessary(path)
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        handlers=[
-            logging.FileHandler(filename=path),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
+    if enable_stdout:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(message)s",
+            handlers=[
+                logging.FileHandler(filename=path),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(message)s",
+            handlers=[
+                logging.FileHandler(filename=path)
+            ]
+        )
 
     return logging.getLogger()
 
