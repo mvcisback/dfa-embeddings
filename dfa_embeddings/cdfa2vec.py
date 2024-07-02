@@ -11,9 +11,10 @@ from tqdm import tqdm
 
 from dfa_sampler import gen_mutated_sequential_reach_avoid
 import dfa_embeddings.utils as utils
-from dfa_embeddings.dfa_builder import DFABuilder
+from dfa_embeddings.cdfa_builder import cDFABuilder
+from dfa_embeddings.dfa2vec import DFA2Vec
 
-from dfa_embeddings.dfa_wrapper import DFAEnv
+from dfa_embeddings.cdfa_wrapper import cDFAEnv
 from dfa_embeddings.envs.dummy import DummyEnv
 
 from dfa_embeddings.model import ACModel
@@ -22,9 +23,9 @@ from dfa_embeddings.model import ACModel
 import torch_ac
 import tensorboardX
 
-class DFA2Vec(object):
+class cDFA2Vec(object):
     def __init__(self, n_tokens=12, pretrained=True, seed=1, alphabet_type='deterministic'):
-        super(DFA2Vec, self).__init__()
+        super(cDFA2Vec, self).__init__()
         alphabet_type = alphabet_type.lower()
         assert alphabet_type in ['probabilistic', 'deterministic', 'p', 'd']
         if alphabet_type == 'p':
@@ -37,8 +38,13 @@ class DFA2Vec(object):
         self.alphabet_type = alphabet_type
         self.encoder = None
         self.decoder = None
-        self.builder = DFABuilder(n_tokens=self.n_tokens, alphabet_type=self.alphabet_type)
-        model_name = f"_s_lr_betas_09_2_gats_1_head_n_tokens:{self.n_tokens}_seed:{self.seed}_architecture_type:monolithic_alphabet_type:{self.alphabet_type}"
+        # try:
+        #     self.dfa2vec = DFA2Vec(n_tokens=self.n_tokens, pretrained=True, seed=self.seed, alphabet_type=self.alphabet_type)
+        # except:
+        #     raise Exception("No pretrained DFA2Vec model.")
+        self.builder = cDFABuilder(n_tokens=self.n_tokens, alphabet_type=self.alphabet_type)
+        # self.builder = cDFABuilder(dfa2vec=self.dfa2vec, n_tokens=self.n_tokens, alphabet_type=self.alphabet_type)
+        model_name = f"_n_tokens:{self.n_tokens}_seed:{self.seed}_architecture_type:compositional_alphabet_type:{self.alphabet_type}"
         storage_dir = "dfa_embeddings/storage"
         self.model_dir = utils.get_model_dir(model_name, storage_dir)
         if self.pretrained:
@@ -47,7 +53,7 @@ class DFA2Vec(object):
             except OSError:
                 raise Exception("No pretrained model for the given configuration.")
             if "model_state" in status:
-                acmodel = ACModel(self.builder.feature_size, self.n_tokens, False, alphabet_type=self.alphabet_type)
+                acmodel = ACModel(self.builder.feature_size, self.n_tokens, True, alphabet_type=self.alphabet_type)
                 acmodel.load_state_dict(status["model_state"])
                 for param in acmodel.parameters():
                     param.requires_grad = False
@@ -63,14 +69,13 @@ class DFA2Vec(object):
         self,
         log_interval=1,
         save_interval=20,
-        procs=16,
+        procs=1,
         frames=10_000_000,
         epochs=2,
         batch_size=1024,
         frames_per_proc=512,
         discount=0.9,
-        # lr=0.001,
-        lr=0.0001,
+        lr=0.001,
         gae_lambda=0.5,
         entropy_coef=0.01,
         value_loss_coef=0.5,
@@ -103,18 +108,19 @@ class DFA2Vec(object):
             status = {"num_frames": 0, "update": 0}
         txt_logger.info("Training status loaded.\n")
 
-        sampler = gen_mutated_sequential_reach_avoid(n_tokens=self.n_tokens)
+        sampler = utils.cDFA_sampler(gen_mutated_sequential_reach_avoid(n_tokens=self.n_tokens))
 
         envs = []
         for i in range(procs):
             dummy_env = DummyEnv(n_tokens=self.n_tokens, timeout=75, alphabet_type=self.alphabet_type)
-            env = DFAEnv(dummy_env, sampler, alphabet_type=self.alphabet_type)
+            # env = cDFAEnv(dummy_env, sampler, self.dfa2vec, alphabet_type=self.alphabet_type)
+            env = cDFAEnv(dummy_env, sampler, alphabet_type=self.alphabet_type)
             envs.append(env)
 
         def preprocessor(obss, device=None):
             return np.array([[self.builder(obs).to(device)] for obs in obss])
 
-        acmodel = ACModel(self.builder.feature_size, self.n_tokens, procs, False, alphabet_type=self.alphabet_type)
+        acmodel = ACModel(self.builder.feature_size, self.n_tokens, True, alphabet_type=self.alphabet_type)
 
         txt_logger.info(f"GAT Number of parameters: {sum(p.numel() for p in acmodel.gnn.parameters() if p.requires_grad)}")
         txt_logger.info(f"embedding size: {acmodel.embedding_size}")

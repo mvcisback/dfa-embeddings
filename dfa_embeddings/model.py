@@ -1,26 +1,11 @@
-"""
-This is the description of the deep NN currently being used.
-It is a small CNN for the features with an GRU encoding of the LTL task.
-The features and LTL are preprocessed by utils.format.get_obss_preprocessor(...) function:
-    - In that function, I transformed the LTL tuple representation into a text representation:
-    - Input:  ('until',('not','a'),('and', 'b', ('until',('not','c'),'d')))
-    - output: ['until', 'not', 'a', 'and', 'b', 'until', 'not', 'c', 'd']
-Each of those tokens get a one-hot embedding representation by the utils.format.Vocabulary class.
-"""
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical, Normal
-import torch_ac
-
 from gymnasium.spaces import Box, Discrete
-
-
-from dfa_embeddings.GATv2 import GATv2
-
-
+import torch_ac
+from dfa_embeddings.GATv2_dfa import GATv2_dfa
+from dfa_embeddings.GATv2_cdfa import GATv2_cdfa
 from dfa_embeddings.policy_network import PolicyNetwork
 
 # Function from https://github.com/ikostrikov/pytorch-a2c-ppo-acktr/blob/master/model.py
@@ -33,19 +18,22 @@ def init_params(m):
             m.bias.data.fill_(0)
 
 class ACModel(nn.Module, torch_ac.ACModel):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim, batch_size, is_compositional, alphabet_type='deterministic'):
         super().__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.text_embedding_size = 32
-        self.gnn = GATv2(input_dim, self.text_embedding_size).to(self.device)
+        if is_compositional:
+            self.gnn = GATv2_cdfa(input_dim, self.text_embedding_size).to(self.device)
+        else:
+            self.gnn = GATv2_dfa(input_dim, self.text_embedding_size, batch_size).to(self.device)
 
         # Resize image embedding
         self.embedding_size = self.text_embedding_size
 
         # Define actor's model
-        self.actor = PolicyNetwork(self.embedding_size, output_dim)
+        self.actor = PolicyNetwork(self.embedding_size, output_dim, alphabet_type=alphabet_type)
 
         # Define critic's model
         self.critic = nn.Sequential(
@@ -68,7 +56,7 @@ class ACModel(nn.Module, torch_ac.ACModel):
 
         return dist, value
 
-    def load_pretrained_gnn(self, model_state):
+    def load_pretrained_gnn(self, model_state, freeze=True):
         new_model_state = model_state.copy()
 
         # We delete all keys relating to the actor/critic.
@@ -78,5 +66,7 @@ class ACModel(nn.Module, torch_ac.ACModel):
 
         self.load_state_dict(new_model_state, strict=False)
 
-        for param in self.gnn.parameters():
-            param.requires_grad = False
+        if freeze:
+            for param in self.gnn.parameters():
+                param.requires_grad = False
+

@@ -25,8 +25,7 @@ class GATv2(nn.Module):
         h = h_0
         for _ in range(self.num_layers):
             h = self.gatv2(g, torch.cat([h, h_0], dim=1)).sum(dim=1)
-        g.ndata['h'] = h
+        g.ndata['h'] = self.g_embed(h)
         g.ndata["is_root"] = g.ndata["is_root"].float()
         hg = dgl.sum_nodes(g, 'h', weight='is_root')
-        return self.g_embed(hg)
-
+        return hg
