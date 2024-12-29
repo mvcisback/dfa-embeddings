@@ -1,5 +1,3 @@
 # dfa-embeddings
 
-To train run:
-
-`$ train.py`
+Describe your project here.

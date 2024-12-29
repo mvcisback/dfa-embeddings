@@ -1,5 +1,0 @@
-dfa==4.7.1
-dfa-sampler==0.1.1
-einops==0.7.0
-funcy==2.0
-numpy==1.26.1
