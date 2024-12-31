@@ -1,5 +1,6 @@
 import itertools
 
+import einops
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -24,7 +25,7 @@ def dfa2mat(dfa: DFA):
 
     m = len(states)
     n = m + len(transitions)
-    adj = np.zeros((n, n), dtype=np.bool_)
+    adj = np.eye(n, dtype=np.bool_)
     features = np.zeros(n, dtype=np.uint64)
 
     state2idx = {s: i for i, s in enumerate(states)}
@@ -49,37 +50,39 @@ class DFAEncoder(eqx.Module):
 
     def __init__(self,
                  n_tokens: int,
-                 hidden_dim: int | None = None,
+                 dim: int | None = None,
                  *, key: PRNGKeyArray):
         self.n_tokens = n_tokens
 
-        if hidden_dim is None:
-            hidden_dim = n_tokens
+        if dim is None:
+            dim = 1 + n_tokens
 
         key_gnn, key_tag = jax.random.split(key, 2)
 
-        self.gnn = GATv2(hidden_dim, key=key_gnn)
+        self.gnn = GATv2(dim, key=key_gnn)
         self.tags = eqx.nn.Embedding(num_embeddings=n_tokens+2,
-                                     embedding_size=hidden_dim,
+                                     embedding_size=dim,
                                      key=key) 
 
     def pack(self, dfa: DFA) -> tuple[Bool[Array, "n n"], UInt64[Array, "n"]]:
         adj, features = dfa2mat(dfa)
         return jnp.array(adj), jnp.array(features)
 
-    @jax.vmap
-    def unpack_and_tag(x) -> Float[Array, "d"]:
+    def unpack_and_tag(self, x) -> Float[Array, "d"]:
         """Unpack bits and map to sum of feature attributes (tags)."""
         indices = jnp.arange(1 + self.n_tokens)  # accepting bit + token bits.
-        return jax.vmap(lambda i: ((x >> i) & 1) * self.tags(i))(indices).sum()
+        x = jax.vmap(lambda i: ((x >> i) & 1) * self.tags(i))(indices)
+        return einops.reduce(x, "k d -> d", 'sum')
 
     def encode_packed_dfa(self,
                           adj: Bool[Array, "n n"],
                           nodes: UInt64[Array, "n"],
                           n_iters: int,
                           *, key: PRNGKeyArray) -> Float[Array, "n d"]:
-        x = unpack_and_tag(nodes)
-        return self.gnn(nodes=x, adj_mat=nodes, n_iters=n_iters, key=key)
+        adj = adj.astype(jnp.float32)
+        nodes = einops.rearrange(nodes, "n -> n 1")
+        nodes = jax.vmap(self.unpack_and_tag)(nodes)
+        return self.gnn(nodes=nodes, adj_mat=adj, n_iters=n_iters, key=key)
 
     def __call__(self, dfa: DFA,
                  n_iters: int | None = None,
