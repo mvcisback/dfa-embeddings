@@ -1,4 +1,5 @@
 import itertools
+from collections import defaultdict
 
 import einops
 import equinox as eqx
@@ -20,8 +21,11 @@ def dfa2mat(dfa: DFA):
 
     states = list(dfa.states())
     tokens = sorted(dfa.inputs)
-    transitions = itertools.product(states, tokens)
-    transitions = [(s, t) for s, t in transitions if s != dfa._transition(s, t)]
+    transitions = defaultdict(list)
+    for s1, t in itertools.product(states, tokens):
+        s2 = dfa._transition(s1, t)
+        if s1 == s2: continue
+        transitions[s1, s2].append(t)
 
     m = len(states)
     n = m + len(transitions)
@@ -33,12 +37,12 @@ def dfa2mat(dfa: DFA):
     for s in states:
         features[state2idx[s]] = int(dfa._label(s))
 
-    for i12, (s1, t) in enumerate(transitions, start=m):
-        s2 = dfa._transition(s1, t)
+    for i12, ((s1, s2), ts) in enumerate(transitions.items(), start=m):
         i1, i2 = map(state2idx.get, (s1, s2))
 
-        features[i12] |= np.uint64(1 << (token2idx[t] + 1))
         adj[i2, i12] = adj[i12, i1] = True  # s2 -> (s1, t) -> s1.
+        for t in ts:
+            features[i12] |= np.uint64(1 << (token2idx[t] + 1))
 
     return adj, features
 

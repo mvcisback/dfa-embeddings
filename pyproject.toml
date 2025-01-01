@@ -25,6 +25,10 @@ dev-dependencies = [
     "jax[cuda12]>=0.4.38",
     "bpython>=0.24",
     "dfa-sampler>=0.1.1",
+    "networkx>=3.4.2",
+    "funcy>=2.0",
+    "optax>=0.2.4",
+    "pygraphviz>=1.14",
 ]
 
 [tool.hatch.metadata]

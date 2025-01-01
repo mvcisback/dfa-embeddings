@@ -10,6 +10,9 @@
 #   universal: false
 
 -e file:.
+absl-py==2.1.0
+    # via chex
+    # via optax
 attrs==24.3.0
     # via dfa
 beartype==0.19.0
@@ -26,6 +29,8 @@ certifi==2024.12.14
     # via requests
 charset-normalizer==3.4.1
     # via requests
+chex==0.1.88
+    # via optax
 curtsies==0.4.2
     # via bpython
 cwcwidth==0.1.9
@@ -42,6 +47,8 @@ einops==0.8.0
 equinox==0.11.11
     # via dfa-embeddings
     # via gatv2-eqx
+etils==1.11.0
+    # via optax
 funcy==2.0
     # via dfa
 gatv2-eqx==0.1.1
@@ -51,15 +58,19 @@ greenlet==3.1.1
 idna==3.10
     # via requests
 jax==0.4.38
+    # via chex
     # via dfa-embeddings
     # via equinox
     # via gatv2-eqx
+    # via optax
 jax-cuda12-pjrt==0.4.38
     # via jax-cuda12-plugin
 jax-cuda12-plugin==0.4.38
     # via jax
 jaxlib==0.4.38
+    # via chex
     # via jax
+    # via optax
 jaxtyping==0.2.36
     # via dfa-embeddings
     # via equinox
@@ -67,11 +78,14 @@ jaxtyping==0.2.36
 ml-dtypes==0.5.0
     # via jax
     # via jaxlib
+networkx==3.4.2
 numpy==1.26.4
+    # via chex
     # via dfa-mutate
     # via jax
     # via jaxlib
     # via ml-dtypes
+    # via optax
     # via scipy
 nvidia-cublas-cu12==12.6.4.1
     # via jax-cuda12-plugin
@@ -101,8 +115,10 @@ nvidia-nvjitlink-cu12==12.6.85
     # via nvidia-cusparse-cu12
 opt-einsum==3.4.0
     # via jax
+optax==0.2.4
 pygments==2.18.0
     # via bpython
+pygraphviz==1.14
 pyxdg==0.28
     # via bpython
 requests==2.32.3
@@ -110,10 +126,16 @@ requests==2.32.3
 scipy==1.14.1
     # via jax
     # via jaxlib
+setuptools==75.6.0
+    # via chex
 six==1.17.0
     # via blessed
+toolz==1.0.0
+    # via chex
 typing-extensions==4.12.2
+    # via chex
     # via equinox
+    # via etils
 urllib3==2.3.0
     # via requests
 wcwidth==0.2.13
