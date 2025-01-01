@@ -30,12 +30,15 @@ def distances_from_accepting(adj, nodes, n):
     # TODO: assert that accepting is a sink and only a single state.
     src = np.argwhere(nodes == 1.0)[0][0]
     x = nx.single_source_shortest_path_length(g, src)
-    return jnp.array([x.get(i, -10) for i in range(adj.shape[0])])
+    dists = jnp.array([x.get(i, 2. * nodes.shape[0]) for i in range(adj.shape[0])])
+    dists = 1 - dists / nodes.shape[0]
+    return dists
+
 
 
 def train(n_tokens=10, dim: int | None = 8, seed=0):
     # Hyperparameters
-    LEARNING_RATE = 3e-5
+    LEARNING_RATE = 1e-3
 
     key = jax.random.PRNGKey(seed)
     dfas = rad_dfas(n_tokens=n_tokens)
@@ -45,7 +48,7 @@ def train(n_tokens=10, dim: int | None = 8, seed=0):
     encoder = DFAEncoder(n_tokens=n_tokens,
                          dim=dim,
                          key=init_key)
-    decoder = eqx.nn.Linear(dim, 1, key=decoder_key)
+    decoder = eqx.nn.MLP(dim, 1, 5, 3, key=decoder_key)
     model = (encoder, decoder)
 
     optim = optax.adamw(LEARNING_RATE)
@@ -95,6 +98,7 @@ def train(n_tokens=10, dim: int | None = 8, seed=0):
                 loss += eval_model(model, adj, nodes, dists=dists, key=call_key)
             print(f'test: {loss / len(test)}')
             if loss < best:
+                best = loss
                 print('new best!')
                 eqx.tree_serialise_leaves(f"checkpoints/checkpoint_{epoch}_{i}.eqx", model)
 
