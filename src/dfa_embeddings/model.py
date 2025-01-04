@@ -19,7 +19,7 @@ def dfa2mat(dfa: DFA):
     """
     assert len(dfa.inputs) < 64, "Currently, support at most 63 inputs."""
 
-    states = list(dfa.states())
+    states = sorted(dfa.states())
     tokens = sorted(dfa.inputs)
     transitions = defaultdict(list)
     for s1, t in itertools.product(states, tokens):
@@ -85,16 +85,18 @@ class DFAEncoder(eqx.Module):
                           *, key: PRNGKeyArray) -> Float[Array, "n d"]:
         adj = adj.astype(jnp.float32)
         nodes = einops.rearrange(nodes, "n -> n 1")
-        nodes = jax.vmap(self.unpack_and_tag)(nodes)
+        nodes = 10.0* jax.vmap(self.unpack_and_tag)(nodes)
         return self.gnn(nodes=nodes, adj_mat=adj, n_iters=n_iters, key=key)
 
     def __call__(self, dfa: DFA,
                  n_iters: int | None = None,
-                 *, key: PRNGKeyArray) -> Float[Array, "n d"]:
+                 *, key: PRNGKeyArray | None=None) -> Float[Array, "n d"]:
         adj, nodes = self.pack(dfa)
 
         if n_iters is None:
             n_iters = nodes.shape[0]
+        if key is None:
+            key = jax.random.PRNGKey(0)
 
         return self.encode_packed_dfa(adj, nodes, n_iters, key=key)
 

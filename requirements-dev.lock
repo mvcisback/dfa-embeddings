@@ -13,6 +13,8 @@
 absl-py==2.1.0
     # via chex
     # via optax
+alembic==1.14.0
+    # via mlflow
 attrs==24.3.0
     # via dfa
 beartype==0.19.0
@@ -24,24 +26,45 @@ bitarray==2.9.3
     # via dfa
 blessed==1.20.0
     # via curtsies
+blinker==1.9.0
+    # via flask
 bpython==0.24
+cachetools==5.5.0
+    # via google-auth
+    # via mlflow-skinny
 certifi==2024.12.14
     # via requests
 charset-normalizer==3.4.1
     # via requests
 chex==0.1.88
     # via optax
+click==8.1.8
+    # via flask
+    # via mlflow-skinny
+cloudpickle==3.1.0
+    # via mlflow-skinny
+contourpy==1.3.1
+    # via matplotlib
 curtsies==0.4.2
     # via bpython
 cwcwidth==0.1.9
     # via bpython
     # via curtsies
+cycler==0.12.1
+    # via matplotlib
+databricks-sdk==0.40.0
+    # via mlflow-skinny
+deprecated==1.2.15
+    # via opentelemetry-api
+    # via opentelemetry-semantic-conventions
 dfa==4.7.1
     # via dfa-mutate
     # via dfa-sampler
 dfa-mutate==0.1.3
     # via dfa-sampler
 dfa-sampler==0.1.1
+docker==7.1.0
+    # via mlflow
 einops==0.8.0
     # via gatv2-eqx
 equinox==0.11.11
@@ -49,14 +72,39 @@ equinox==0.11.11
     # via gatv2-eqx
 etils==1.11.0
     # via optax
+flask==3.1.0
+    # via mlflow
+fonttools==4.55.3
+    # via matplotlib
 funcy==2.0
     # via dfa
-gatv2-eqx==0.1.1
+gatv2-eqx @ file:///home/mvc/work/dfa-embeddings/../gatv2
     # via dfa-embeddings
+gitdb==4.0.12
+    # via gitpython
+gitpython==3.1.44
+    # via mlflow-skinny
+google-auth==2.37.0
+    # via databricks-sdk
+graphene==3.4.3
+    # via mlflow
+graphql-core==3.2.5
+    # via graphene
+    # via graphql-relay
+graphql-relay==3.2.0
+    # via graphene
 greenlet==3.1.1
     # via bpython
+    # via sqlalchemy
+gunicorn==23.0.0
+    # via mlflow
 idna==3.10
     # via requests
+importlib-metadata==8.5.0
+    # via mlflow-skinny
+    # via opentelemetry-api
+itsdangerous==2.2.0
+    # via flask
 jax==0.4.38
     # via chex
     # via dfa-embeddings
@@ -75,17 +123,42 @@ jaxtyping==0.2.36
     # via dfa-embeddings
     # via equinox
     # via gatv2-eqx
+jinja2==3.1.5
+    # via flask
+    # via mlflow
+joblib==1.4.2
+    # via scikit-learn
+kiwisolver==1.4.8
+    # via matplotlib
+mako==1.3.8
+    # via alembic
+markdown==3.7
+    # via mlflow
+markupsafe==3.0.2
+    # via jinja2
+    # via mako
+    # via werkzeug
+matplotlib==3.10.0
+    # via mlflow
 ml-dtypes==0.5.0
     # via jax
     # via jaxlib
+mlflow==2.19.0
+mlflow-skinny==2.19.0
+    # via mlflow
 networkx==3.4.2
 numpy==1.26.4
     # via chex
+    # via contourpy
     # via dfa-mutate
     # via jax
     # via jaxlib
+    # via matplotlib
     # via ml-dtypes
+    # via mlflow
     # via optax
+    # via pandas
+    # via scikit-learn
     # via scipy
 nvidia-cublas-cu12==12.6.4.1
     # via jax-cuda12-plugin
@@ -113,30 +186,97 @@ nvidia-nvjitlink-cu12==12.6.85
     # via nvidia-cufft-cu12
     # via nvidia-cusolver-cu12
     # via nvidia-cusparse-cu12
+opentelemetry-api==1.29.0
+    # via mlflow-skinny
+    # via opentelemetry-sdk
+    # via opentelemetry-semantic-conventions
+opentelemetry-sdk==1.29.0
+    # via mlflow-skinny
+opentelemetry-semantic-conventions==0.50b0
+    # via opentelemetry-sdk
 opt-einsum==3.4.0
     # via jax
 optax==0.2.4
+packaging==24.2
+    # via gunicorn
+    # via matplotlib
+    # via mlflow-skinny
+pandas==2.2.3
+    # via mlflow
+pillow==11.1.0
+    # via matplotlib
+protobuf==5.29.2
+    # via mlflow-skinny
+pyarrow==18.1.0
+    # via mlflow
+pyasn1==0.6.1
+    # via pyasn1-modules
+    # via rsa
+pyasn1-modules==0.4.1
+    # via google-auth
 pygments==2.18.0
     # via bpython
 pygraphviz==1.14
+pyparsing==3.2.1
+    # via matplotlib
+python-dateutil==2.9.0.post0
+    # via graphene
+    # via matplotlib
+    # via pandas
+pytz==2024.2
+    # via pandas
 pyxdg==0.28
     # via bpython
+pyyaml==6.0.2
+    # via mlflow-skinny
 requests==2.32.3
     # via bpython
+    # via databricks-sdk
+    # via docker
+    # via mlflow-skinny
+rsa==4.9
+    # via google-auth
+scikit-learn==1.6.0
+    # via mlflow
 scipy==1.14.1
     # via jax
     # via jaxlib
+    # via mlflow
+    # via scikit-learn
 setuptools==75.6.0
     # via chex
 six==1.17.0
     # via blessed
+    # via python-dateutil
+smmap==5.0.2
+    # via gitdb
+sqlalchemy==2.0.36
+    # via alembic
+    # via mlflow
+sqlparse==0.5.3
+    # via mlflow-skinny
+threadpoolctl==3.5.0
+    # via scikit-learn
 toolz==1.0.0
     # via chex
 typing-extensions==4.12.2
+    # via alembic
     # via chex
     # via equinox
     # via etils
+    # via graphene
+    # via opentelemetry-sdk
+    # via sqlalchemy
+tzdata==2024.2
+    # via pandas
 urllib3==2.3.0
+    # via docker
     # via requests
 wcwidth==0.2.13
     # via blessed
+werkzeug==3.1.3
+    # via flask
+wrapt==1.17.0
+    # via deprecated
+zipp==3.21.0
+    # via importlib-metadata

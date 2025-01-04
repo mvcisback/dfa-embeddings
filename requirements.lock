@@ -18,7 +18,7 @@ einops==0.8.0
 equinox==0.11.11
     # via dfa-embeddings
     # via gatv2-eqx
-gatv2-eqx==0.1.1
+gatv2-eqx @ file:///home/mvc/work/dfa-embeddings/../gatv2
     # via dfa-embeddings
 jax==0.4.38
     # via dfa-embeddings

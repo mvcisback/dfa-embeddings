@@ -6,7 +6,7 @@ authors = [
     { name = "Marcell Vazquez-Chanlatte", email = "mvc@linux.com" }
 ]
 dependencies = [
-    "gatv2-eqx>=0.1.1",
+    "gatv2-eqx @ file:///home/mvc/work/dfa-embeddings/../gatv2",
     "jaxtyping>=0.2.36",
     "beartype>=0.19.0",
     "equinox>=0.11.11",
@@ -29,6 +29,7 @@ dev-dependencies = [
     "funcy>=2.0",
     "optax>=0.2.4",
     "pygraphviz>=1.14",
+    "mlflow>=2.19.0",
 ]
 
 [tool.hatch.metadata]
